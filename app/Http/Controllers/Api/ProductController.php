@@ -1,85 +1,60 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\API;
+
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\ProductResource;
-use App\Models\Product;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Auth;
+use App\Http\Resources\ProductResource;
+use App\Http\Requests\ProductRequest;
+use App\Services\ProductService;
+use App\Models\Product;
+
 
 class ProductController extends Controller
 {
+    protected $service;
+
+
+    public function __construct(ProductService $service)
+    {
+        $this->service = $service;
+        $this->middleware('auth:sanctum')->except(['index', 'show']);
+    }
+
 
     public function index(Request $request)
     {
-        $products = Product::latest()->paginate(10);
+        $perPage = $request->get('per_page', 15);
+        $products = $this->service->list($perPage);
         return ProductResource::collection($products);
     }
 
-    public function store(Request $request)
-    {
-        $validated = $request->validated();
-        
-        // Get each field from request
-        $productData = [
-            'name' => $request->name,
-            'description' => $request->description,
-            'price' => $request->price,
-            'quantity' => $request->quantity,
-            'sku' => $request->sku,
-            'user_id' => Auth::id()
-        ];
 
-        $product = Product::create($productData);
-        
-        return response()->json([
-            'message' => 'Product created successfully',
-            'product' => new ProductResource($product)
-        ], Response::HTTP_CREATED);
-    }
-
-    public function show(Product $product)
+    public function store(ProductRequest $request)
     {
+        $product = $this->service->create($request->validated());
         return new ProductResource($product);
     }
 
-    public function update(Request $request, Product $product)
-    {
-        $validated = $request->validated();
-        
-        // Update each field individually
-        if ($request->has('name')) {
-            $product->name = $request->name;
-        }
-        if ($request->has('description')) {
-            $product->description = $request->description;
-        }
-        if ($request->has('price')) {
-            $product->price = $request->price;
-        }
-        if ($request->has('quantity')) {
-            $product->quantity = $request->quantity;
-        }
-        if ($request->has('sku')) {
-            $product->sku = $request->sku;
-        }
-        
-        $product->save();
 
-        return response()->json([
-            'message' => 'Product updated successfully',
-            'product' => new ProductResource($product)
-        ]);
+    public function show($id)
+    {
+        $product = $this->service->find($id);
+        return new ProductResource($product);
     }
+
+
+    public function update(ProductRequest $request, Product $product)
+    {
+        $product = $this->service->update($product, $request->validated());
+        return new ProductResource($product);
+    }
+
 
     public function destroy(Product $product)
     {
-        $product->delete();
-
-        return response()->json([
-            'message' => 'Product deleted successfully'
-        ]);
+        $this->service->delete($product);
+        return response()->json(['message' => 'Deleted'], 200);
     }
 }
