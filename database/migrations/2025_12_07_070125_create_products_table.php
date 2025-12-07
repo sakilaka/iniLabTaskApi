@@ -15,10 +15,8 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->text('description')->nullable();
-            $table->decimal('price', 10, 2);
-            $table->integer('quantity');
-            $table->string('sku')->unique();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->decimal('price', 10, 2)->default(0);
+            $table->integer('stock')->default(0);
             $table->timestamps();
         });
     }
